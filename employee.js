@@ -1,9 +1,11 @@
 const mysql = require("mysql");
  const inquirer = require("inquirer");
+ 
 
 let connection = mysql.createConnection({
   host: "localhost",
 
+  
   // Your port; if not 3306
   port: 3306,
 
@@ -17,12 +19,12 @@ let connection = mysql.createConnection({
 
 connection.connect(function (err) {
   if (err) throw err;
-  init();
+  start();
 });
 
-//Init function
-function init() {
-    //Prompt list of actions (ex. view departments, view roles etc...)
+//Start function
+function start() {
+    
     inquirer
     .prompt({
         name: "action",
@@ -35,6 +37,7 @@ function init() {
             "Add Department",
             "Add Role",
             "Add Employee",
+            "Update Role",
             "Exit"
         ]
     //Then run a switch case for each function that corresponds to each action
@@ -58,6 +61,9 @@ function init() {
             case "Add Employee": 
                 addEmployee();
                 break;
+                case "Update Role": 
+                updateRole();
+                break;
             case "Exit": 
                 connection.end();
                 break;
@@ -68,40 +74,37 @@ function init() {
 
 //View departments
 function viewDepartments() {
-    //query variable
+  
     const query = "SELECT * FROM departments";
     //connection
     connection.query(query, (err, res) => {
         if (err) throw err;
         console.table(res);
-        //run init
-        init();
+      // starts
+        start();
     }) 
 }
     
 //View roles
 function viewRoles() {
-    //query variable
     const query = "SELECT id, title FROM roles";
-    //connection
     connection.query(query, (err, res) => {
         if (err) throw err;
         console.table(res);
-        //run init
-        init();
+        
+        start();
     })  
 }
 
-//View All Employees
+//View  Employees
 function viewEmployees() {
-    //query variable
+    
     const query = "SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name FROM employees LEFT JOIN roles ON employees.role_id = roles.id LEFT JOIN departments ON roles.department_id = departments.id";
-    //connection
     connection.query(query, (err, res) => {
         if (err) throw err;
         console.table(res);
-        //run init
-        init();
+        
+        start();
     });
 }         
 
@@ -111,13 +114,13 @@ function viewEmployees() {
 
 //Add department
 function addDepartment() {
-    //prompt name of new department
+    //Get name of new department
     inquirer
         .prompt({
             name: "name",
             type: "input",
             message: "What is the name of the department you want to add?"
-        //then query that inserts that department into database
+        //This inserts that department into database
         }).then(function(answer) {
             const query = "INSERT INTO departments (name) VALUES (?)";
             connection.query(query, answer.name, (err, res) => {
@@ -125,7 +128,7 @@ function addDepartment() {
                 if(res.affectedRows > 0) {
                     console.log(res.affectedRows + " department added successfully!");
                 }
-                init();
+                start();
             });
         });
 }
@@ -137,9 +140,9 @@ function addRole() {
     const query = "SELECT id AS value, department_name AS name FROM departments";
     connection.query(query, (err, res) => {
         if(err) throw err;
-        //push departments into an array
+        
         array = JSON.parse(JSON.stringify(res));
-    //create array of questions
+    //Creates array of questions for new role
     const questions = [
         {
             type: "input",
@@ -163,7 +166,7 @@ function addRole() {
             message: "Is this a manager role?"
         },
     ]
-    //prompt questions then query that inserts role into database
+    // This inserts new role into database
     inquirer
     .prompt(questions).then(function(answer) {
         const query = "INSERT INTO roles (role_title, role_salary, department_id, manager) VALUES (?, ?, ?, ?)";
@@ -172,7 +175,7 @@ function addRole() {
             if(res.affectedRows > 0) {
                 console.log(res.affectedRows + " department added successfully added!");
             }
-            init();
+            start();
         });
     });
 });
@@ -180,7 +183,7 @@ function addRole() {
     
 //Add employee
 function addEmployee() {
-    //prompt name
+    //Get name
     inquirer
     .prompt([
         {
@@ -193,27 +196,26 @@ function addEmployee() {
             name: "lastName",
             message: "What is the employee's last name?"
         }
-    //then query for  
+    
     ]).then(function(answer) { 
         let query = "SELECT id AS value, title AS name FROM roles WHERE manager = 0";
         connection.query(query, (err, res) => {
             if(err) throw err;
-            //push roles into array
+            
             let array = JSON.parse(JSON.stringify(res));
-            //then prompt role. choices are array
+            
             inquirer.prompt({
                 type: "list",
                 name: "role",
                 message: "What is the role of this employee?",
                 choices: array
-            //then query all managers
+          
             }).then(function(answer2) {
                 let query = "SELECT employees.id AS value, CONCAT(employees.first_name, ' ', employees.last_name) AS name FROM employees INNER JOIN roles ON employees.role_id = roles.id WHERE roles.manager = 1";
                 connection.query(query, (err, res) => {
                     if(err) throw err;
-                    //push managers into array
+                    
                     let array = JSON.parse(JSON.stringify(res));
-                    //then prompt manager. choices are array
                     inquirer.prompt({
                         type: "list",
                         name: "manager",
@@ -226,7 +228,7 @@ function addEmployee() {
                             if(res.affectedRows > 0) {
                             console.log(res.affectedRows + " department added successfully added!");
                             }
-                            init();
+                            start();
                         });
                     })
                 }); 
